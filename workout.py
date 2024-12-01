@@ -5,16 +5,15 @@ import faiss
 import redis
 import pickle
 from typing import List, Dict, Any
-
-# Removed incorrect import of 'OpenAI'
-# The openai library doesn't provide a class named 'OpenAI'
-# Instead, we will use the correct method if OpenAI's API is needed
-
-# Efficient Imports
 import pymongo
-from sentence_transformers import SentenceTransformer
+from pymongo import MongoClient
+from sentence_transformers import SentenceTransformer,util
 from transformers import pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
+client = MongoClient("mongodb://localhost:27017/")
+db = client['studyai']
+collection = db['python']
+model = SentenceTransformer('bert-base-nli-mean-tokens')
 
 class EfficientStudyAI:
     def __init__(self, 
@@ -54,51 +53,66 @@ class EfficientStudyAI:
     def find_similar_questions(self, 
                                 available_time: float, 
                                 similarity_threshold: float = 0.75) -> List[Dict[str, Any]]:
-        """Efficient question similarity search with FAISS"""
-        # Fetch questions with indexing
-        previous_papers = list(self.db['python'].find({"paper_type": "pre"}).hint([("paper_type", 1)]))
-        model_papers = list(self.db['python'].find({"paper_type": "mod"}).hint([("paper_type", 1)]))
-        
+        # Fetch questions
+        previous_papers = collection.find({"paper_type": "pre"})
+        model_papers = collection.find({"paper_type": "mod"})
+
         previous_questions = [(q['_id'], q['question'], q['answer'], q['est_tim']) for q in previous_papers]
         model_questions = [(q['_id'], q['question'], q['answer']) for q in model_papers]
-        
-        # Efficient embedding
-        pre_embeddings = np.array([self.cached_embedding(q[1]) for q in previous_questions])
-        mod_embeddings = np.array([self.cached_embedding(q[1]) for q in model_questions])
-        
-        # FAISS for fast similarity search
-        index = faiss.IndexFlatL2(pre_embeddings.shape[1])
-        index.add(pre_embeddings)
-        
-        repeated_questions = []
-        for j, (mod_id, mod_question, mod_answer) in enumerate(model_questions):
-            query_embedding = mod_embeddings[j].reshape(1, -1)
-            distances, indices = index.search(query_embedding, 1)
+
+        # Encode questions
+        if previous_questions and model_questions:
+            pre_embeddings = model.encode([q[1] for q in previous_questions])
+            mod_embeddings = model.encode([q[1] for q in model_questions])
+            similarity_scores = util.pytorch_cos_sim(pre_embeddings, mod_embeddings)
             
-            if distances[0][0] < similarity_threshold:
-                pre_idx = indices[0][0]
-                pre_id, pre_question, pre_answer, pre_time = previous_questions[pre_idx]
+            # Threshold and repeated questions
+            similarity_threshold = 0.75
+            repeated_questions = []
+
+            for i, (pre_id, pre_question, pre_answer, pre_time) in enumerate(previous_questions):
+                for j, (mod_id, mod_question, mod_answer) in enumerate(model_questions):
+                    score = similarity_scores[i][j].item()
+                    if score > similarity_threshold:
+                        repeated_questions.append({
+                            "pre_id": pre_id,
+                            "pre_question": pre_question,
+                            "pre_answer": pre_answer,
+                            "mod_id": mod_id,
+                            "mod_question": mod_question,
+                            "mod_answer": mod_answer,
+                            "similarity_score": score,
+                            "est_time": pre_time
+                        })
+
+            # Display repeated questions based on available time
+            sorted_repeated_questions = sorted(repeated_questions, key=lambda x: (-x['similarity_score'], x['mod_id']))
+            selected_questions = []
+            total_time = 0
+
+            for repeated in sorted_repeated_questions:
+                question_time = repeated['est_time']
+                if total_time + question_time <= available_time:
+                    selected_questions.append(repeated)
+                    total_time += question_time
+
+            # Output results in Streamlit
+            st.subheader("Selected Questions Based on Available Time and Similarity")
+            for repeated in selected_questions:
+                st.write(f"**Repeated Question Found (Similarity: {repeated['similarity_score']:.2f})**")
+                st.write(f"- **Previous Question:** {repeated['pre_question']}")
+                st.write(f"- **Model Question:** {repeated['mod_question']}")
+                st.write(f"- **Answer:** {repeated['mod_answer']}")
+                st.write(f"- **Estimated time:** {repeated['est_time']} minutes")
+                st.write("---")
+
+        else:
+            st.warning("No questions were retrieved. Please check your MongoDB connection or data availability.")
+        st.write("QUESTIONS SHOULD LOOK IF THIS COMPLETED BEFORE TIME")
+        qa_pipeline = pipeline("question-answering", model="bert-large-uncased-whole-word-masking-finetuned-squad")
+
                 
-                repeated_questions.append({
-                    "pre_id": pre_id,
-                    "pre_question": pre_question,
-                    "pre_answer": pre_answer,
-                    "mod_id": mod_id,
-                    "mod_question": mod_question,
-                    "mod_answer": mod_answer,
-                    "similarity_score": 1 / (1 + distances[0][0]),
-                    "est_time": pre_time
-                })
         
-        # Time-constrained selection
-        selected_questions = []
-        total_time = 0
-        for repeated in sorted(repeated_questions, key=lambda x: (-x['similarity_score'], x['mod_id'])):
-            if total_time + repeated['est_time'] <= available_time:
-                selected_questions.append(repeated)
-                total_time += repeated['est_time']
-        
-        return selected_questions
     
     def generate_contextual_answer(self, question: str, contexts: str) -> str:
         """Advanced question-answering with chunking"""
@@ -126,26 +140,22 @@ def main():
     
     # Time-based question selection
     available_time = st.number_input("Exam Prep Time (minutes):", 
-                                     min_value=0.0, step=1.0, value=60.0)
+                                     min_value=0.0, step=1.0, value=0.0)
     
     # Find and display similar questions
     similar_questions = study_ai.find_similar_questions(available_time)
-    
-    st.subheader("Recommended Questions")
-    for q in similar_questions:
-        st.write(f"Question: {q['pre_question']}")
-        st.write(f"Similarity: {q['similarity_score']:.2f}")
-        st.write(f"Estimated Time: {q['est_time']} mins")
-        st.write("---")
-    
     # Question answering
     st.subheader("AI Answer Generator")
     user_question = st.text_input("Ask a question:")
     
     if user_question:
-        # Example placeholder for AI-generated answer
-        st.write("AI Answer generation functionality is not implemented here.")
-        # You can integrate with OpenAI or other APIs here for enhanced answers.
+        # Fetch context
+        context_data = list(study_ai.db['answers'].find({"intent": "intent"}))
+        contexts = ' '.join([c['question'] for c in context_data])
+        
+        # Generate answer
+        answer = study_ai.generate_contextual_answer(user_question, contexts)
+        st.write(f"**Answer:** {answer}")
 
 if __name__ == "__main__":
     main()
