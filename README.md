@@ -42,3 +42,8 @@ Ensure the following are installed and running:
    ```bash
    git clone https://github.com/your-username/STUDYAIPRO.git
    cd STUDYAIPRO
+## filenames(desc)
+documentinsertion.py---> for inserting the model and question paper questions and answers.
+que-gen(db).py-----> for ai answer generation.
+above both are related to database codes.
+main.py------------> is the actual studyaipro code.
