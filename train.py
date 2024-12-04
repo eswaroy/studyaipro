@@ -59,7 +59,7 @@ from imblearn.over_sampling import RandomOverSampler
 import pickle
 
 # Load the dataset
-df = pd.read_excel('test1.xlsx')
+df = pd.read_excel('test.xlsx')
 
 # Convert Pass/Fail to binary labels
 df['Pass/Fail'] = (df['Pass/Fail'] == 'Pass').astype(int)
