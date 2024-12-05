@@ -159,6 +159,10 @@ def main():
     # Initialize StudyAI
     study_ai = EfficientStudyAI()
     
+    # Existing functionalities
+    available_time = st.number_input("Exam Prep Time (minutes):", min_value=0.0, step=1.0, value=0.0)
+    similar_questions = study_ai.find_similar_questions(available_time)
+    
     # Pass/Fail Prediction Feature
     st.subheader("Exam Pass Prediction")
     attendance = st.number_input("Attendance Percentage:", min_value=0.0, max_value=100.0, step=0.1, value=75.0)
@@ -171,11 +175,6 @@ def main():
     if st.button("Predict Pass/Fail"):
         result = predict_pass_fail(attendance, study_hours, midterm1_score, midterm2_score,Assignment_Completion)
         st.write(f"**Prediction:** You are likely to **{result}** the exam.")
-    
-    # Existing functionalities
-    available_time = st.number_input("Exam Prep Time (minutes):", min_value=0.0, step=1.0, value=0.0)
-    similar_questions = study_ai.find_similar_questions(available_time)
-
     # Question answering
     st.subheader("AI Answer Generator")
     user_question = st.text_input("Ask a question:")
