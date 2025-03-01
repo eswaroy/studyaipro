@@ -164,11 +164,11 @@ def main():
     similar_questions = study_ai.find_similar_questions(available_time)
     
     # Pass/Fail Prediction Feature
-    st.subheader("Exam Pass Prediction")
-    attendance = st.number_input("Attendance Percentage:", min_value=0.0, max_value=100.0, step=0.1, value=75.0)
+    st.subheader("Exam Pass/Fail Predictor")
+    attendance = st.number_input("Attendance Percentage:", min_value=0.0, max_value=100.0, step=0.1, value=74.0)
     study_hours = st.number_input("Study Hours per Week:", min_value=0.0, step=0.1, value=10.0)
-    midterm1_score = st.number_input("Midterm 1 Score (%):", min_value=0.0, max_value=100.0, step=0.1, value=50.0)
-    midterm2_score = st.number_input("Midterm 2 Score (%):", min_value=0.0, max_value=100.0, step=0.1, value=50.0)
+    midterm1_score = st.number_input("Midterm 1 Score (%):", min_value=0.0, max_value=100.0, step=0.1, value=73.0)
+    midterm2_score = st.number_input("Midterm 2 Score (%):", min_value=0.0, max_value=100.0, step=0.1, value=75.0)
     Assignment_Completion=st.number_input("Assignment Completion (%):", min_value=0.0, max_value=100.0, step=0.1, value=60.0)
 
     
