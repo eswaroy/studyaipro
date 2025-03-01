@@ -6,10 +6,9 @@ from sklearn.metrics import accuracy_score
 import pandas as pd
 
 # Load dataset
-df = pd.read_excel('test1.xlsx')
-X = df[['Attendance (%)', 'Study Hours (per week)', 'Midterm 1 Score (%)', 'Midterm 2 Score (%)','Assignment Completion (%)']].values
+df = pd.read_excel('test.xlsx')
+X = df[['Attendance (%)', 'Study Hours per Week','Midterm 1 Score (%)', 'Midterm 2 Score (%)','Assignment Completion (%)']].values
 y = df['Pass/Fail'].values
-
 # Train/test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 

@@ -5,8 +5,8 @@
 # from sklearn.metrics import classification_report
 # from sklearn.preprocessing import StandardScaler
 # from imblearn.over_sampling import RandomOverSampler
-import pickle
-import numpy as np
+# import pickle
+# import numpy as np
 # # Load the dataset
 # df = pd.read_excel('test.xlsx')
 
